@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON 關鍵字清單 (去重與排序)</title>
+    <style>
+        #container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Flexbox 標籤牆容器 */
+        #list-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        /* 關鍵字標籤樣式 */
+        .keyword-item {
+            padding: 10px 18px;
+            background-color: #f0f4f8;
+            border: 1px solid #d0e2ff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .keyword-item:hover {
+            background-color: #e0eefe;
+            border-color: #a6c8ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+        }
+
+        /* 底部 JSON Raw 區塊樣式 */
+        .raw-json-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745; /* 綠色左邊條提示 */
+            border-radius: 4px;
+        }
+
+        .raw-json-section h3 {
+            margin-top: 0;
+            color: #28a745;
+        }
+
+        pre {
+            background-color: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h2>關鍵字清單</h2>
+        <div id="list-container">載入中...</div>
+
+        <div id="raw-json-container"></div>
+    </div>
+
+    <script>
+        // 請替換成您的 GitHub Gist Raw 網址或其他支援 CORS 的雲端網址
+        const jsonUrl = './list.json';
+
+        fetch(jsonUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('網路回應錯誤');
+                return response.json();
+            })
+            .then(originalArray => {
+                const listContainer = document.getElementById('list-container');
+                listContainer.innerHTML = '';
+
+                if (!Array.isArray(originalArray)) {
+                    listContainer.textContent = 'JSON 格式錯誤：預期應為字串陣列。';
+                    return;
+                }
+
+                // 1. 去除重複 (利用 Set) 並進行排序 (sort)
+                const uniqueArray = [...new Set(originalArray)].sort();
+
+                // 2. 渲染處理後的關鍵字 div 標籤
+                uniqueArray.forEach(text => {
+                    const div = document.createElement('div');
+                    div.className = 'keyword-item';
+                    div.textContent = text;
+
+                    div.addEventListener('click', () => {
+                        window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, '_blank');
+                    });
+
+                    listContainer.appendChild(div);
+                });
+
+                // 3. 檢查是否有重複的字串 (比較去重前後的陣列長度)
+                const hasDuplicates = originalArray.length !== uniqueArray.length;
+
+                if (hasDuplicates) {
+                    // 將處理後的陣列轉回 JSON 字串 (使用 2 格縮排美化輸出)
+                    const jsonRawString = JSON.stringify(uniqueArray, null, 2);
+
+                    // 建立顯示於畫面最下方的區塊
+                    const rawJsonContainer = document.getElementById('raw-json-container');
+                    rawJsonContainer.innerHTML = `
+                        <div class="raw-json-section">
+                            <h3>偵測到重複字串！已自動去重並排序：</h3>
+                            <p>您可以複製下方最新的 JSON 字串更新至您的雲端空間：</p>
+                            <pre><code>${escapeHtml(jsonRawString)}</code></pre>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('讀取失敗:', error);
+                document.getElementById('list-container').textContent = '無法載入清單。';
+            });
+
+        // 安全處理 HTML 字元的副函式，避免 JSON 內有 < 或 > 導致網頁結構破壞
+        function escapeHtml(string) {
+            return string.replace(/[&<>"']/g, function(match) {
+                const mask = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return mask[match];
+            });
+        }
+    </script>
+</body>
+</html>
